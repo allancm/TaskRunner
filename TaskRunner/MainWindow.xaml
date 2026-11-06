@@ -1,0 +1,225 @@
+<Window x:Class="TaskRunner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:TaskRunner.ViewModels"
+        xmlns:m="clr-namespace:TaskRunner.Models"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="Task Runner" Height="560" Width="1100"
+        Background="#F4F5F7" FontFamily="Segoe UI" FontSize="13">
+
+    <Window.Resources>
+        <!-- Status badge: color by status, using DataTriggers (no converters needed) -->
+        <Style x:Key="StatusBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="Background" Value="#9AA0A6" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static m:WorkStatus.Queued}">
+                    <Setter Property="Background" Value="#E8A33D" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static m:WorkStatus.Running}">
+                    <Setter Property="Background" Value="#2F6FED" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static m:WorkStatus.Completed}">
+                    <Setter Property="Background" Value="#2E9E5B" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static m:WorkStatus.Cancelled}">
+                    <Setter Property="Background" Value="#D64545" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="Panel" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="Margin" Value="8" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+
+        <Style x:Key="Header" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="340" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== LEFT: selected task / new task ===== -->
+        <Border Grid.Column="0" Style="{StaticResource Panel}">
+            <StackPanel>
+                <TextBlock>
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource Header}">
+                            <Setter Property="Text" Value="Edit task" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNewMode}" Value="True">
+                                    <Setter Property="Text" Value="New task" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock Text="Name" />
+                <TextBox Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,10" />
+
+                <TextBlock Text="Description" />
+                <TextBox Text="{Binding EditDescription, UpdateSourceTrigger=PropertyChanged}"
+                         Height="70" TextWrapping="Wrap" AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto" Margin="0,2,0,10" />
+
+                <TextBlock Text="Duration (seconds, 1–600)" />
+                <TextBox Text="{Binding EditDuration, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,14" />
+
+                <WrapPanel>
+                    <Button Content="New" Command="{Binding NewCommand}" />
+                    <Button Content="Save" Command="{Binding SaveCommand}" />
+                    <Button Content="Delete" Command="{Binding DeleteCommand}" />
+                    <Button Content="▶ Run" Command="{Binding RunCommand}" FontWeight="SemiBold" />
+                </WrapPanel>
+
+                <TextBlock Margin="0,10,0,0" Foreground="#6B7280" TextWrapping="Wrap"
+                           Text="Buttons enable/disable themselves through CanExecute. Up to 2 tasks run at once; the rest wait in the queue." />
+            </StackPanel>
+        </Border>
+
+        <!-- ===== CENTER: task list ===== -->
+        <Border Grid.Column="1" Style="{StaticResource Panel}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Tasks" Style="{StaticResource Header}" />
+                <ListView ItemsSource="{Binding Tasks}"
+                          SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                          BorderThickness="0">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="6" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Description}" Foreground="#6B7280" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding DurationSeconds, StringFormat={}{0}s}"
+                                           VerticalAlignment="Center" Margin="10,0" Foreground="#6B7280" />
+                                <Border Grid.Column="2" Style="{StaticResource StatusBadge}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Status}" Foreground="White" FontSize="11" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== RIGHT: animated execution stack ===== -->
+        <Border Grid.Column="2" Style="{StaticResource Panel}">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top">
+                    <Button DockPanel.Dock="Right" Content="Clear finished"
+                            Command="{Binding ClearFinishedCommand}" Margin="0,0,0,8" />
+                    <TextBlock Text="Execution stack" Style="{StaticResource Header}" />
+                </DockPanel>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding ExecutionStack}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Each card slides in and fades in when it's added -->
+                                <Border Background="#F8F9FB" BorderBrush="#E3E6EB" BorderThickness="1"
+                                        CornerRadius="6" Padding="10" Margin="0,0,0,8" Opacity="0">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform X="40" />
+                                    </Border.RenderTransform>
+                                    <Border.Triggers>
+                                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                     To="1" Duration="0:0:0.35" />
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                                     To="0" Duration="0:0:0.35">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <QuadraticEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Border.Triggers>
+
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <!-- Pulsing dot while Running -->
+                                            <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="#C4C9D0" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static m:WorkStatus.Running}">
+                                                                <Setter Property="Fill" Value="#2F6FED" />
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard Name="Pulse">
+                                                                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                             From="1" To="0.2" Duration="0:0:0.6" />
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <StopStoryboard BeginStoryboardName="Pulse" />
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+
+                                            <!-- CommandParameter BEFORE Command: so CanExecute is first evaluated with the item, not null -->
+                                            <Button DockPanel.Dock="Right" Content="Cancel" Margin="0"
+                                                    CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            <Border DockPanel.Dock="Right" Style="{StaticResource StatusBadge}"
+                                                    VerticalAlignment="Center" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Status}" Foreground="White" FontSize="11" />
+                                            </Border>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+
+                                        <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100"
+                                                     Height="8" Margin="0,8,0,4" Foreground="#2F6FED" />
+                                        <TextBlock Foreground="#6B7280" FontSize="11"
+                                                   Text="{Binding RemainingSeconds, StringFormat='{}{0}s left'}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
